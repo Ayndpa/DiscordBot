@@ -9,7 +9,7 @@ intents = discord.Intents.default()
 intents.message_content = True  # 启用消息内容权限
 
 # 创建Bot实例
-bot = discord.Client(intents=intents, proxy="http://localhost:7897")
+bot = discord.Client(intents=intents)
 
 # 定义频道名与目标语言的映射
 CHANNEL_LANGUAGE_MAP = {
