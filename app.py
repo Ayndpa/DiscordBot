@@ -9,7 +9,7 @@ intents = discord.Intents.default()
 intents.message_content = True  # 启用消息内容权限
 
 # 创建Bot实例
-bot = discord.Client(intents=intents)
+bot = discord.Client(intents=intents, proxy="http://localhost:7897")
 
 # 定义频道名与目标语言的映射
 CHANNEL_LANGUAGE_MAP = {
@@ -23,27 +23,46 @@ async def process_translation(message, source_language, guild, channel_name, tar
     if channel_name != message.channel.name:
         target_channel = discord.utils.get(guild.text_channels, name=channel_name)
         if target_channel:
-            # 如果消息包含文本，进行翻译
-            if message.content:
-                translated_message = translate_text(message.content, source_language, target_language)
-                if translated_message:
-                    embed = discord.Embed(
-                        description=translated_message,
-                        color=discord.Color.blue()
-                    )
-                    embed.set_author(name=f"{message.author.display_name} said:", icon_url=message.author.avatar.url if message.author.avatar else None)
-                    await target_channel.send(embed=embed)
-            
-            # 如果消息包含图片，转发图片
-            if message.attachments:
-                for attachment in message.attachments:
-                    if attachment.url.lower().endswith(('png', 'jpg', 'jpeg', 'gif', 'webp')):
-                        await target_channel.send(content=f"{message.author.display_name} shared an image:", file=await attachment.to_file())
-            
-            # 如果消息包含贴纸，转发贴纸
-            if message.stickers:
-                for sticker in message.stickers:
-                    await target_channel.send(content=f"{message.author.display_name} shared a sticker: {sticker.url}")
+            translated_message = translate_text(message.content, source_language, target_language)
+            if translated_message:
+                embed = discord.Embed(
+                    description=translated_message,
+                    color=discord.Color.blue()
+                )
+                embed.set_author(name=f"{message.author.display_name} said:", icon_url=message.author.avatar.url if message.author.avatar else None)
+                await target_channel.send(embed=embed)
+
+# 辅助函数：转发贴纸或图片
+async def forward_stickers_and_attachments(message, guild):
+    for channel_name in CHANNEL_LANGUAGE_MAP.keys():
+        if channel_name != message.channel.name:
+            target_channel = discord.utils.get(guild.text_channels, name=channel_name)
+            if target_channel:
+                # 转发贴纸
+                if message.stickers:
+                    for sticker in message.stickers:
+                        await target_channel.send(f"{message.author.display_name} shared a sticker:", stickers=[sticker])
+                # 转发图片
+                if message.attachments:
+                    for attachment in message.attachments:
+                        embed = discord.Embed(color=discord.Color.blue())
+                        embed.set_image(url=attachment.url)
+                        embed.set_author(name=f"{message.author.display_name} shared an image:", icon_url=message.author.avatar.url if message.author.avatar else None)
+                        await target_channel.send(embed=embed)
+
+# 辅助函数：处理普通文本消息
+async def handle_text_message(message, guild):
+    if not message.content.strip():  # 如果消息内容为空，跳过处理
+        return
+
+    source_channel = message.channel
+    if source_channel.name in CHANNEL_LANGUAGE_MAP:
+        source_language = CHANNEL_LANGUAGE_MAP[source_channel.name]
+        tasks = [
+            asyncio.create_task(process_translation(message, source_language, guild, channel_name, target_language))
+            for channel_name, target_language in CHANNEL_LANGUAGE_MAP.items()
+        ]
+        await asyncio.gather(*tasks)
 
 # Bot启动时的事件
 @bot.event
@@ -56,16 +75,15 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    source_channel = message.channel
     guild = message.guild
 
-    if source_channel.name in CHANNEL_LANGUAGE_MAP:
-        source_language = CHANNEL_LANGUAGE_MAP[source_channel.name]
-        tasks = [
-            asyncio.create_task(process_translation(message, source_language, guild, channel_name, target_language))
-            for channel_name, target_language in CHANNEL_LANGUAGE_MAP.items()
-        ]
-        await asyncio.gather(*tasks)
+    # 如果消息包含贴纸或图片，直接转发到目标频道
+    if message.stickers or message.attachments:
+        await forward_stickers_and_attachments(message, guild)
+        return
+
+    # 如果是普通文本消息，执行翻译逻辑
+    await handle_text_message(message, guild)
 
 # 运行Bot
 bot.run(os.getenv('DISCORD_BOT_TOKEN'))
