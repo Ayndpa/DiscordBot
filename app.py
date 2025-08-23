@@ -46,6 +46,16 @@ async def on_message(message):
     source_channel = message.channel
     guild = message.guild
 
+    if message.type != discord.MessageType.default:
+        embed = discord.Embed(
+            description=message.content,
+            color=discord.Color.green()
+        )
+        embed.set_author(name=f"{message.author.display_name}", icon_url=message.author.avatar.url if message.author.avatar else None)
+        files = [await attachment.to_file() for attachment in message.attachments]
+        await source_channel.send(embed=embed, files=files)
+        return
+
     if source_channel.name in CHANNEL_LANGUAGE_MAP:
         source_language = CHANNEL_LANGUAGE_MAP[source_channel.name]
         tasks = [
