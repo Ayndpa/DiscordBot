@@ -23,14 +23,27 @@ async def process_translation(message, source_language, guild, channel_name, tar
     if channel_name != message.channel.name:
         target_channel = discord.utils.get(guild.text_channels, name=channel_name)
         if target_channel:
-            translated_message = translate_text(message.content, source_language, target_language)
-            if translated_message:
-                embed = discord.Embed(
-                    description=translated_message,
-                    color=discord.Color.blue()
-                )
-                embed.set_author(name=f"{message.author.display_name} said:", icon_url=message.author.avatar.url if message.author.avatar else None)
-                await target_channel.send(embed=embed)
+            # 如果消息包含文本，进行翻译
+            if message.content:
+                translated_message = translate_text(message.content, source_language, target_language)
+                if translated_message:
+                    embed = discord.Embed(
+                        description=translated_message,
+                        color=discord.Color.blue()
+                    )
+                    embed.set_author(name=f"{message.author.display_name} said:", icon_url=message.author.avatar.url if message.author.avatar else None)
+                    await target_channel.send(embed=embed)
+            
+            # 如果消息包含图片，转发图片
+            if message.attachments:
+                for attachment in message.attachments:
+                    if attachment.url.lower().endswith(('png', 'jpg', 'jpeg', 'gif', 'webp')):
+                        await target_channel.send(content=f"{message.author.display_name} shared an image:", file=await attachment.to_file())
+            
+            # 如果消息包含贴纸，转发贴纸
+            if message.stickers:
+                for sticker in message.stickers:
+                    await target_channel.send(content=f"{message.author.display_name} shared a sticker: {sticker.url}")
 
 # Bot启动时的事件
 @bot.event
@@ -45,16 +58,6 @@ async def on_message(message):
 
     source_channel = message.channel
     guild = message.guild
-
-    if message.type != discord.MessageType.default:
-        embed = discord.Embed(
-            description=message.content,
-            color=discord.Color.green()
-        )
-        embed.set_author(name=f"{message.author.display_name}", icon_url=message.author.avatar.url if message.author.avatar else None)
-        files = [await attachment.to_file() for attachment in message.attachments]
-        await source_channel.send(embed=embed, files=files)
-        return
 
     if source_channel.name in CHANNEL_LANGUAGE_MAP:
         source_language = CHANNEL_LANGUAGE_MAP[source_channel.name]
