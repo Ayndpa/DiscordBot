@@ -25,23 +25,25 @@ def generate_message_link(referenced_message):
 # 辅助函数：处理引用消息内容
 async def process_referenced_message(referenced_message, source_language, target_language):
     original_message_link = generate_message_link(referenced_message)
+    author_name = referenced_message.author.display_name
+
     if referenced_message.content:
         translated_content = translate_text(referenced_message.content, source_language, target_language)
-        return f"{translated_content}\n[Jump to original message]({original_message_link})"
+        return f"**{author_name}** said:\n{translated_content}\n[Jump to original message]({original_message_link})"
     elif referenced_message.stickers:
-        return f"Referenced a sticker. [Jump to original message]({original_message_link})"
+        return f"**{author_name}** referenced a sticker. [Jump to original message]({original_message_link})"
     elif referenced_message.attachments:
-        return f"Referenced an attachment: {referenced_message.attachments[0].url}\n[Jump to original message]({original_message_link})"
+        return f"**{author_name}** referenced an attachment: {referenced_message.attachments[0].url}\n[Jump to original message]({original_message_link})"
     
-    # 检查引用的消息是否为翻译的 embed
     if isinstance(referenced_message.embeds, list) and referenced_message.embeds:
         embed = referenced_message.embeds[0]
-        if embed.footer and embed.footer.text.startswith("Original Message ID:"):
-            original_message_id = embed.footer.text.split(":")[1].strip()
-            original_message = await referenced_message.channel.fetch_message(original_message_id)
-            if original_message and original_message.content:
-                translated_content = translate_text(original_message.content, source_language, target_language)
-                return f"{translated_content}\n[Jump to original message]({original_message_link})"
+        embed_data = embed.to_dict()
+        if 'fields' in embed_data:
+            for field in embed_data['fields']:
+                if field['name'] == 'Message' and 'value' in field:
+                    translated_value = translate_text(field['value'], source_language, target_language)
+                    author_name = embed_data['author']['name'] if 'author' in embed_data and 'name' in embed_data['author'] else "Unknown"
+                    return f"**{author_name}**\n{translated_value}\n[Jump to original message]({original_message_link})"
 
     return None
 
@@ -72,11 +74,8 @@ async def process_translation(message, source_language, guild, channel_name, tar
         if translated_message:
             embed.add_field(name="Message", value=translated_message, inline=False)
 
-        embed.set_author(name=f"{message.author.display_name} said:", icon_url=message.author.avatar.url if message.author.avatar else None)
+        embed.set_author(name=message.author.display_name, icon_url=message.author.avatar.url if message.author.avatar else None)
         
-        # 添加原文ID到Embed的footer
-        embed.set_footer(text=f"Original Message ID: {message.id}")
-
         await target_channel.send(embed=embed)
 
 # 辅助函数：转发贴纸或图片
@@ -99,7 +98,7 @@ async def forward_stickers_and_attachments(message, guild):
             for attachment in message.attachments:
                 embed = discord.Embed(color=discord.Color.blue())
                 embed.set_image(url=attachment.url)
-                embed.set_author(name=f"{message.author.display_name} shared an image:", icon_url=message.author.avatar.url if message.author.avatar else None)
+                embed.set_author(name=message.author.display_name, icon_url=message.author.avatar.url if message.author.avatar else None)
                 await target_channel.send(embed=embed)
 
 # 辅助函数：处理普通文本消息
