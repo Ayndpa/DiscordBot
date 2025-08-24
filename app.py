@@ -32,6 +32,17 @@ async def process_referenced_message(referenced_message, source_language, target
         return f"Referenced a sticker. [Jump to original message]({original_message_link})"
     elif referenced_message.attachments:
         return f"Referenced an attachment: {referenced_message.attachments[0].url}\n[Jump to original message]({original_message_link})"
+    
+    # 检查引用的消息是否为翻译的 embed
+    if isinstance(referenced_message.embeds, list) and referenced_message.embeds:
+        embed = referenced_message.embeds[0]
+        if embed.footer and embed.footer.text.startswith("Original Message ID:"):
+            original_message_id = embed.footer.text.split(":")[1].strip()
+            original_message = await referenced_message.channel.fetch_message(original_message_id)
+            if original_message and original_message.content:
+                translated_content = translate_text(original_message.content, source_language, target_language)
+                return f"{translated_content}\n[Jump to original message]({original_message_link})"
+
     return None
 
 # 翻译并发送消息的独立函数
@@ -62,6 +73,10 @@ async def process_translation(message, source_language, guild, channel_name, tar
             embed.add_field(name="Message", value=translated_message, inline=False)
 
         embed.set_author(name=f"{message.author.display_name} said:", icon_url=message.author.avatar.url if message.author.avatar else None)
+        
+        # 添加原文ID到Embed的footer
+        embed.set_footer(text=f"Original Message ID: {message.id}")
+
         await target_channel.send(embed=embed)
 
 # 辅助函数：转发贴纸或图片
