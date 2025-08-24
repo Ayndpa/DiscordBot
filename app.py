@@ -18,62 +18,74 @@ CHANNEL_LANGUAGE_MAP = {
     "한국인": "ko"
 }
 
-# 辅助函数：处理引用消息的翻译
-async def handle_referenced_message(message, guild, source_language, target_language, target_channel):
-    if message.reference and message.reference.resolved:
-        referenced_message = message.reference.resolved
-        if referenced_message.content:  # 如果引用的是文本消息
-            translated_reference = translate_text(referenced_message.content, source_language, target_language)
-            if translated_reference:
-                embed = discord.Embed(
-                    description=f"**Referenced message:** {translated_reference}",
-                    color=discord.Color.green()
-                )
-                embed.set_author(name=f"{referenced_message.author.display_name} said:", icon_url=referenced_message.author.avatar.url if referenced_message.author.avatar else None)
-                await target_channel.send(embed=embed)
-        elif referenced_message.attachments:  # 如果引用的是附件
-            for attachment in referenced_message.attachments:
-                embed = discord.Embed(color=discord.Color.green())
-                embed.set_image(url=attachment.url)
-                embed.set_author(name=f"{referenced_message.author.display_name} shared an image:", icon_url=referenced_message.author.avatar.url if referenced_message.author.avatar else None)
-                await target_channel.send(embed=embed)
-        elif referenced_message.stickers:  # 如果引用的是贴纸
-            for sticker in referenced_message.stickers:
-                await target_channel.send(f"{referenced_message.author.display_name} shared a sticker:", stickers=[sticker])
+# 辅助函数：生成引用消息链接
+def generate_message_link(referenced_message):
+    return f"https://discord.com/channels/{referenced_message.guild.id}/{referenced_message.channel.id}/{referenced_message.id}"
+
+# 辅助函数：处理引用消息内容
+async def process_referenced_message(referenced_message, source_language, target_language):
+    original_message_link = generate_message_link(referenced_message)
+    if referenced_message.content:
+        translated_content = translate_text(referenced_message.content, source_language, target_language)
+        return f"{translated_content}\n[Jump to original message]({original_message_link})"
+    elif referenced_message.stickers:
+        return f"Referenced a sticker. [Jump to original message]({original_message_link})"
+    elif referenced_message.attachments:
+        return f"Referenced an attachment: {referenced_message.attachments[0].url}\n[Jump to original message]({original_message_link})"
+    return None
 
 # 翻译并发送消息的独立函数
 async def process_translation(message, source_language, guild, channel_name, target_language):
-    if channel_name != message.channel.name:
-        target_channel = discord.utils.get(guild.text_channels, name=channel_name)
-        if target_channel:
-            translated_message = translate_text(message.content, source_language, target_language)
-            if translated_message:
-                embed = discord.Embed(
-                    description=translated_message,
-                    color=discord.Color.blue()
-                )
-                embed.set_author(name=f"{message.author.display_name} said:", icon_url=message.author.avatar.url if message.author.avatar else None)
-                await target_channel.send(embed=embed)
-            # 处理引用消息
-            await handle_referenced_message(message, guild, source_language, target_language, target_channel)
+    if channel_name == message.channel.name:
+        return
+
+    target_channel = discord.utils.get(guild.text_channels, name=channel_name)
+    if not target_channel:
+        return
+
+    translated_message = translate_text(message.content, source_language, target_language)
+    translated_reference = None
+
+    # 如果有引用消息，处理引用消息的翻译或链接
+    if message.reference and message.reference.resolved:
+        translated_reference = await process_referenced_message(message.reference.resolved, source_language, target_language)
+
+    if translated_message or translated_reference:
+        embed = discord.Embed(color=discord.Color.blue())
+
+        # 添加引用消息的翻译或链接
+        if translated_reference:
+            embed.add_field(name="Referenced message", value=translated_reference, inline=False)
+
+        # 添加原消息的翻译
+        if translated_message:
+            embed.add_field(name="Message", value=translated_message, inline=False)
+
+        embed.set_author(name=f"{message.author.display_name} said:", icon_url=message.author.avatar.url if message.author.avatar else None)
+        await target_channel.send(embed=embed)
 
 # 辅助函数：转发贴纸或图片
 async def forward_stickers_and_attachments(message, guild):
-    for channel_name in CHANNEL_LANGUAGE_MAP.keys():
-        if channel_name != message.channel.name:
-            target_channel = discord.utils.get(guild.text_channels, name=channel_name)
-            if target_channel:
-                # 转发贴纸
-                if message.stickers:
-                    for sticker in message.stickers:
-                        await target_channel.send(f"{message.author.display_name} shared a sticker:", stickers=[sticker])
-                # 转发图片
-                if message.attachments:
-                    for attachment in message.attachments:
-                        embed = discord.Embed(color=discord.Color.blue())
-                        embed.set_image(url=attachment.url)
-                        embed.set_author(name=f"{message.author.display_name} shared an image:", icon_url=message.author.avatar.url if message.author.avatar else None)
-                        await target_channel.send(embed=embed)
+    for channel_name, _ in CHANNEL_LANGUAGE_MAP.items():
+        if channel_name == message.channel.name:
+            continue
+
+        target_channel = discord.utils.get(guild.text_channels, name=channel_name)
+        if not target_channel:
+            continue
+
+        # 转发贴纸
+        if message.stickers:
+            for sticker in message.stickers:
+                await target_channel.send(f"{message.author.display_name} shared a sticker:", stickers=[sticker])
+
+        # 转发图片
+        if message.attachments:
+            for attachment in message.attachments:
+                embed = discord.Embed(color=discord.Color.blue())
+                embed.set_image(url=attachment.url)
+                embed.set_author(name=f"{message.author.display_name} shared an image:", icon_url=message.author.avatar.url if message.author.avatar else None)
+                await target_channel.send(embed=embed)
 
 # 辅助函数：处理普通文本消息
 async def handle_text_message(message, guild):
