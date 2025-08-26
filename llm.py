@@ -24,7 +24,7 @@ def translate_text(text: str, source_language: str, target_language: str, contex
             {"role": "system", "content": "You are a helpful translation assistant."}
         ]
         if context:
-            messages.append({"role": "user", "content": f"Context: {context}"})
+            messages.append({"role": "user", "content": f"Context(don't translate, just for understanding): {context}"})
         messages.append({"role": "user", "content": f"Translate the following text from {source_language} to {target_language}:\n\n{text}"})
         
         response = client.chat.completions.create(
