@@ -26,8 +26,8 @@ def translate_text(text: str, source_language: str, target_language: str) -> str
 
         # 将当前文本添加到上下文池
         context_pool.append(text)
-        # 保留上下文池的最近 5 条记录
-        context_pool = context_pool[-5:]
+        # 保留上下文池的最近 12 条记录
+        context_pool = context_pool[-12:]
 
         # 构建消息列表
         messages = [
