@@ -62,7 +62,7 @@ async def process_translation(message, source_language, guild, channel_name, tar
 
     # 将上下文拼接为一个字符串，供翻译使用
     context_text = "\n".join(context_messages)
-    translated_message = translate_text(context_text, source_language, target_language, context=context_text)
+    translated_message = translate_text(message.content, source_language, target_language, context=context_text)
     translated_reference = None
 
     # 如果有引用消息，处理引用消息的翻译或链接
