@@ -21,11 +21,29 @@ def translate_text(text: str, source_language: str, target_language: str, contex
     try:
         client = openai.OpenAI(api_key=api_key, base_url=base_url)
         messages = [
-            {"role": "system", "content": "You are a helpful translation assistant."}
+            {
+            "role": "system",
+            "content": (
+                "You are an expert translator. "
+                "Translate user input accurately from the source language to the target language. "
+                "Preserve meaning, tone, and context. "
+                "If context is provided, use it to improve translation quality. "
+                "Only reply with the translated text, without explanations."
+            )
+            }
         ]
         if context:
-            messages.append({"role": "user", "content": f"Context(don't translate, just for understanding): {context}"})
-        messages.append({"role": "user", "content": f"Translate the following text from {source_language} to {target_language}:\n\n{text}"})
+            messages.append({
+            "role": "user",
+            "content": f"Context (for reference, do not translate): {context}"
+            })
+        messages.append({
+            "role": "user",
+            "content": (
+            f"Translate the following text from {source_language} to {target_language}:\n"
+            f"{text}"
+            )
+        })
         
         response = client.chat.completions.create(
             model="qwen-plus-latest",
