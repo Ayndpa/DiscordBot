@@ -5,23 +5,12 @@ import os
 api_key = os.getenv("OPENAI_API_KEY")
 base_url = os.getenv("OPENAI_API_BASE")
 
-# 全局变量，用于存储聊天消息
-chat_messages = [
-    {
-        "role": "system",
-        "content": (
-            "You are an expert translator. "
-            "Translate user input accurately from the source language to the target language. "
-            "Preserve meaning, tone, and context. "
-            "If context is provided, use it to improve translation quality. "
-            "Only reply with the translated text, without explanations."
-        )
-    }
-]
+# 全局上下文池，用于保存最近的翻译文本原文
+context_pool = []
 
 def translate_text(text: str, source_language: str, target_language: str) -> str:
     """
-    使用 OpenAI 的模型翻译文本。
+    使用 OpenAI 的模型翻译文本，并自动维护上下文。
 
     参数:
         text (str): 要翻译的文本。
@@ -33,29 +22,54 @@ def translate_text(text: str, source_language: str, target_language: str) -> str
     """
     try:
         client = openai.OpenAI(api_key=api_key, base_url=base_url)
-        global chat_messages  # 使用全局消息列表
-        chat_messages.append({
+        global context_pool  # 使用全局上下文池
+
+        # 将当前文本添加到上下文池
+        context_pool.append(text)
+        # 保留上下文池的最近 5 条记录
+        context_pool = context_pool[-5:]
+
+        # 构建消息列表
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert translator. "
+                    "Translate user input accurately from the source language to the target language. "
+                    "Preserve meaning, tone, and context. "
+                    "If context is provided, use it to improve translation quality. "
+                    "Only reply with the translated text, without explanations."
+                )
+            }
+        ]
+
+        # 添加上下文到消息列表
+        if len(context_pool) > 1:
+            context = " | ".join(context_pool[:-1])  # 合并上下文池中的历史记录
+            messages.append({
+                "role": "user",
+                "content": f"Context (for reference, do not translate): {context}"
+            })
+
+        # 添加当前文本到消息列表
+        messages.append({
             "role": "user",
             "content": (
                 f"Translate the following text from {source_language} to {target_language}:\n"
                 f"{text}"
             )
         })
-        
-        # 保留 System 消息和最近 20 条用户消息
-        chat_messages = chat_messages[:1] + [
-            msg for msg in chat_messages[1:] if msg["role"] == "user"
-        ][-20:]
 
+        # 调用 OpenAI API
         response = client.chat.completions.create(
             model="qwen-plus-latest",
-            messages=chat_messages,
+            messages=messages,
             max_tokens=1000,
             temperature=0.3
         )
+
         # 提取翻译结果
         translated_text = response.choices[0].message.content.strip()
-        
         return translated_text
     except openai.APIError as e:
         print(f"API 错误: {e}")
