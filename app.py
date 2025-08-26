@@ -56,7 +56,13 @@ async def process_translation(message, source_language, guild, channel_name, tar
     if not target_channel:
         return
 
-    translated_message = translate_text(message.content, source_language, target_language)
+    # 获取对应频道的最近20条上下文消息
+    history = await message.channel.history(limit=20).flatten()
+    context_messages = [msg.content for msg in history if msg.content and not msg.embeds]
+
+    # 将上下文拼接为一个字符串，供翻译使用
+    context_text = "\n".join(context_messages)
+    translated_message = translate_text(context_text, source_language, target_language, context=context_text)
     translated_reference = None
 
     # 如果有引用消息，处理引用消息的翻译或链接
