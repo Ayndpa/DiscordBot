@@ -11,11 +11,11 @@ intents.message_content = True  # 启用消息内容权限
 # 创建Bot实例
 bot = discord.Client(intents=intents)
 
-# 定义频道名与目标语言的映射
+# 定义频道ID与目标语言的映射
 CHANNEL_LANGUAGE_MAP = {
-    "中文": "zh",
-    "日本語": "ja",
-    "한국인": "ko"
+    1351152435359645749: "chinese",
+    1408437901036884028: "japanese",
+    1408438002862002239: "korean"
 }
 
 # 辅助函数：生成引用消息链接
