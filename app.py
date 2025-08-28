@@ -47,11 +47,11 @@ async def process_referenced_message(referenced_message, source_language, target
     return None
 
 # 翻译并发送消息的独立函数
-async def process_translation(message, source_language, guild, channel_name, target_language):
-    if channel_name == message.channel.name:
+async def process_translation(message, source_language, guild, channel_id, target_language):
+    if channel_id == message.channel.id:
         return
 
-    target_channel = discord.utils.get(guild.text_channels, name=channel_name)
+    target_channel = discord.utils.get(guild.text_channels, id=channel_id)
     if not target_channel:
         return
 
@@ -79,11 +79,11 @@ async def process_translation(message, source_language, guild, channel_name, tar
 
 # 辅助函数：转发贴纸或图片
 async def forward_stickers_and_attachments(message, guild):
-    for channel_name, _ in CHANNEL_LANGUAGE_MAP.items():
-        if channel_name == message.channel.name:
+    for channel_id, _ in CHANNEL_LANGUAGE_MAP.items():
+        if channel_id == message.channel.id:
             continue
 
-        target_channel = discord.utils.get(guild.text_channels, name=channel_name)
+        target_channel = discord.utils.get(guild.text_channels, id=channel_id)
         if not target_channel:
             continue
 
@@ -103,11 +103,11 @@ async def handle_text_message(message, guild):
         return
 
     source_channel = message.channel
-    if source_channel.name in CHANNEL_LANGUAGE_MAP:
-        source_language = CHANNEL_LANGUAGE_MAP[source_channel.name]
+    if source_channel.id in CHANNEL_LANGUAGE_MAP:
+        source_language = CHANNEL_LANGUAGE_MAP[source_channel.id]
         tasks = [
-            asyncio.create_task(process_translation(message, source_language, guild, channel_name, target_language))
-            for channel_name, target_language in CHANNEL_LANGUAGE_MAP.items()
+            asyncio.create_task(process_translation(message, source_language, guild, channel_id, target_language))
+            for channel_id, target_language in CHANNEL_LANGUAGE_MAP.items()
         ]
         await asyncio.gather(*tasks)
 
