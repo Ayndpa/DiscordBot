@@ -41,9 +41,8 @@ async def process_referenced_message(referenced_message, source_language, target
         if 'fields' in embed_data:
             for field in embed_data['fields']:
                 if field['name'] == 'Message' and 'value' in field:
-                    translated_value = translate_text(field['value'], source_language, target_language)
                     author_name = embed_data['author']['name'] if 'author' in embed_data and 'name' in embed_data['author'] else "Unknown"
-                    return f"**{author_name}**\n{translated_value}\n[Jump to original message]({original_message_link})"
+                    return f"**{author_name}**\n{field['value']}\n[Jump to original message]({original_message_link})"
 
     return None
 
