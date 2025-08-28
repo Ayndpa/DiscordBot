@@ -37,8 +37,10 @@ def translate_text(text: str, source_language: str, target_language: str) -> str
                     "You are an expert translator. "
                     "Translate user input accurately from the source language to the target language. "
                     "Preserve meaning, tone, and context. "
+                    "The input text is from a Discord chat, so it may contain informal language, abbreviations, slang, and typos. Handle any typos by correcting them where appropriate to ensure accurate translation. "
                     "If context is provided, use it to improve translation quality. "
-                    "Only reply with the translated text, without explanations."
+                    "If you encounter complex concepts or meanings that are unclear or not understood, provide a brief explanation along with the translation to clarify, but keep it concise and integrated. "
+                    "Reply with the translated text, including any necessary explanations without additional commentary."
                 )
             }
         ]
