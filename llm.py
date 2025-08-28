@@ -63,11 +63,10 @@ def translate_text(text: str, source_language: str, target_language: str) -> str
         })
 
         # 调用 OpenAI API
+        model_name = os.getenv("OPENAI_MODEL_NAME")  # 从环境变量读取模型名称
         response = client.chat.completions.create(
-            model="qwen-plus-latest",
+            model=model_name,
             messages=messages,
-            max_tokens=1000,
-            temperature=0.3
         )
 
         # 提取翻译结果
