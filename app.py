@@ -95,10 +95,7 @@ async def forward_stickers_and_attachments(message, guild):
         # 转发图片
         if message.attachments:
             for attachment in message.attachments:
-                embed = discord.Embed(color=discord.Color.blue())
-                embed.set_image(url=attachment.url)
-                embed.set_author(name=message.author.display_name, icon_url=message.author.avatar.url if message.author.avatar else None)
-                await target_channel.send(embed=embed)
+                await target_channel.send(f"{message.author.display_name} shared an attachment: {attachment.url}")
 
 # 辅助函数：处理普通文本消息
 async def handle_text_message(message, guild):
