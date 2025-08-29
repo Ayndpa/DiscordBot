@@ -40,11 +40,12 @@ def translate_text(text: str, source_language: str, target_language: str) -> str
                     "Correct typos and handle slang/abbreviations. "
                     "Prioritize gaming terms over literal translations. "
                     "Clarify unclear concepts concisely if needed. "
-                    "Reply with translated text only."
+                    "NEVER translate emojis, special characters, or formatting (like *bold* or _italics_). "
+                    "Leave them exactly as they appear in the original text. "
+                    "Reply with translated text only, keeping all non-text elements unchanged."
                 )
             }
         ]
-
         # 添加上下文到消息列表
         if len(context_pool) > 1:
             context = " | ".join(context_pool[:-1])  # 合并上下文池中的历史记录
